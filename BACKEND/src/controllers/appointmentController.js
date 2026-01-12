@@ -1,0 +1,129 @@
+import Appointment from '../models/Appointment.js';
+
+class AppointmentController {
+  async createAppointment(req, res) {
+    try {
+      const { sessionId, ownerName, petName, phone, preferredDateTime } = req.body;
+
+      // Validate required fields
+      if (!ownerName || !petName || !phone || !preferredDateTime) {
+        return res.status(400).json({
+          error: 'All fields are required: ownerName, petName, phone, preferredDateTime'
+        });
+      }
+
+      // Create new appointment
+      const appointment = new Appointment({
+        sessionId: sessionId || 'direct-booking',
+        ownerName,
+        petName,
+        phone,
+        preferredDateTime,
+        status: 'pending'
+      });
+
+      // Save to database
+      await appointment.save();
+
+      res.status(201).json({
+        message: 'Appointment created successfully',
+        appointment: {
+          id: appointment._id,
+          ownerName: appointment.ownerName,
+          petName: appointment.petName,
+          phone: appointment.phone,
+          preferredDateTime: appointment.preferredDateTime,
+          status: appointment.status,
+          createdAt: appointment.createdAt
+        }
+      });
+
+    } catch (error) {
+      console.error('Create appointment error:', error);
+      res.status(500).json({
+        error: 'Failed to create appointment'
+      });
+    }
+  }
+
+  async getAppointments(req, res) {
+    try {
+      const { sessionId } = req.query;
+
+      const query = sessionId ? { sessionId } : {};
+      const appointments = await Appointment.find(query).sort({ createdAt: -1 });
+
+      res.json({
+        appointments
+      });
+
+    } catch (error) {
+      console.error('Get appointments error:', error);
+      res.status(500).json({
+        error: 'Failed to retrieve appointments'
+      });
+    }
+  }
+
+  async getAppointmentById(req, res) {
+    try {
+      const { id } = req.params;
+
+      const appointment = await Appointment.findById(id);
+
+      if (!appointment) {
+        return res.status(404).json({
+          error: 'Appointment not found'
+        });
+      }
+
+      res.json({
+        appointment
+      });
+
+    } catch (error) {
+      console.error('Get appointment error:', error);
+      res.status(500).json({
+        error: 'Failed to retrieve appointment'
+      });
+    }
+  }
+
+  async updateAppointmentStatus(req, res) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!['pending', 'confirmed', 'cancelled'].includes(status)) {
+        return res.status(400).json({
+          error: 'Invalid status. Must be: pending, confirmed, or cancelled'
+        });
+      }
+
+      const appointment = await Appointment.findByIdAndUpdate(
+        id,
+        { status },
+        { new: true }
+      );
+
+      if (!appointment) {
+        return res.status(404).json({
+          error: 'Appointment not found'
+        });
+      }
+
+      res.json({
+        message: 'Appointment status updated successfully',
+        appointment
+      });
+
+    } catch (error) {
+      console.error('Update appointment error:', error);
+      res.status(500).json({
+        error: 'Failed to update appointment'
+      });
+    }
+  }
+}
+
+export default new AppointmentController();
