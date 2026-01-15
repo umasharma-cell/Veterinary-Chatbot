@@ -56,7 +56,7 @@ class AppointmentService {
 
       case 'ASK_DATE_TIME':
         return {
-          message: 'When would you prefer to schedule the appointment? Please provide your preferred date and time.',
+          message: 'When would you prefer to schedule the appointment? Please provide a future date and time (e.g., "tomorrow at 2pm", "next Monday at 10:30am", or "January 20, 2026 at 3pm").',
           nextState: 'CONFIRMATION'
         };
 
@@ -108,6 +108,66 @@ Is this information correct? (Type 'yes' to confirm or 'no' to start over)`;
     };
   }
 
+  // Validate date and time
+  validateDateTime(dateTimeStr) {
+    try {
+      // Try to parse various date formats
+      const inputDate = new Date(dateTimeStr);
+
+      // Check if date is valid
+      if (isNaN(inputDate.getTime())) {
+        return {
+          valid: false,
+          message: 'Please provide a valid date and time (e.g., "tomorrow at 2pm", "January 15 at 3:30pm", "2024-01-15 14:00").'
+        };
+      }
+
+      const now = new Date();
+
+      // Check if date is in the past
+      if (inputDate <= now) {
+        return {
+          valid: false,
+          message: 'Please select a future date and time. Appointments cannot be booked for past dates or times.'
+        };
+      }
+
+      // Check if date is too far in the future (optional: limit to 6 months)
+      const sixMonthsFromNow = new Date();
+      sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+
+      if (inputDate > sixMonthsFromNow) {
+        return {
+          valid: false,
+          message: 'Appointments can only be scheduled up to 6 months in advance. Please choose an earlier date.'
+        };
+      }
+
+      // Format the date nicely for confirmation
+      const options = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      };
+      const formattedDate = inputDate.toLocaleDateString('en-US', options);
+
+      return {
+        valid: true,
+        date: inputDate,
+        formatted: formattedDate
+      };
+    } catch (error) {
+      return {
+        valid: false,
+        message: 'Please provide a valid date and time format.'
+      };
+    }
+  }
+
   // Process user response during booking flow
   processBookingResponse(state, userMessage, appointmentData) {
     console.log('Processing booking response for state:', state);
@@ -156,11 +216,23 @@ Is this information correct? (Type 'yes' to confirm or 'no' to start over)`;
 
       case 'CONFIRMATION':
         // We asked for date/time, so this response is the date/time
-        if (userMessage.trim().length < 3) {
+        const dateTimeInput = userMessage.trim();
+
+        if (dateTimeInput.length < 3) {
           response.isValid = false;
           response.errorMessage = 'Please provide a preferred date and time.';
         } else {
-          response.data.preferredDateTime = userMessage.trim();
+          // Validate the date and time
+          const dateValidation = this.validateDateTime(dateTimeInput);
+
+          if (!dateValidation.valid) {
+            response.isValid = false;
+            response.errorMessage = dateValidation.message;
+          } else {
+            // Store both the original input and formatted date
+            response.data.preferredDateTime = dateValidation.formatted;
+            response.data.appointmentDate = dateValidation.date;
+          }
         }
         break;
 
