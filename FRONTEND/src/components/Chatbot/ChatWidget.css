@@ -99,7 +99,7 @@
 .chat-header-button {
   background: transparent;
   border: 1px solid transparent;
-  color: #666666;
+  color: #1a1a1a;
   cursor: pointer;
   width: 32px;
   height: 32px;
@@ -112,9 +112,9 @@
 }
 
 .chat-header-button:hover {
-  background: #ffffff;
-  border-color: #e0e0e0;
-  color: #1a1a1a;
+  background: rgba(0, 0, 0, 0.05);
+  border-color: #d0d0d0;
+  color: #000000;
 }
 
 .chat-header-button:active {
