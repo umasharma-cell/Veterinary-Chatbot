@@ -147,17 +147,19 @@ const ChatWidget = ({ config }) => {
           onClick={() => setIsOpen(true)}
           aria-label="Open chat"
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C13.19 22 14.34 21.78 15.41 21.38L19.44 22.38C19.78 22.46 20.13 22.31 20.31 22.01C20.49 21.71 20.47 21.33 20.26 21.05L18.52 18.48C20.04 16.82 21 14.54 21 12C21 6.48 16.52 2 12 2Z"
-                  fill="rgba(255, 255, 255, 0.9)"/>
-            <circle cx="8" cy="12" r="1.5" fill="rgba(0, 0, 0, 0.8)">
-              <animate attributeName="r" values="1.5;2;1.5" dur="3s" repeatCount="indefinite"/>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"
+                  fill="none"
+                  stroke="#666666"
+                  strokeWidth="1.5"/>
+            <circle cx="8" cy="9.5" r="1" fill="#666666">
+              <animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite"/>
             </circle>
-            <circle cx="12" cy="12" r="1.5" fill="rgba(0, 0, 0, 0.8)">
-              <animate attributeName="r" values="1.5;2;1.5" dur="3s" repeatCount="indefinite" begin="0.5s"/>
+            <circle cx="12" cy="9.5" r="1" fill="#666666">
+              <animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite" begin="0.3s"/>
             </circle>
-            <circle cx="16" cy="12" r="1.5" fill="rgba(0, 0, 0, 0.8)">
-              <animate attributeName="r" values="1.5;2;1.5" dur="3s" repeatCount="indefinite" begin="1s"/>
+            <circle cx="16" cy="9.5" r="1" fill="#666666">
+              <animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite" begin="0.6s"/>
             </circle>
           </svg>
         </button>
