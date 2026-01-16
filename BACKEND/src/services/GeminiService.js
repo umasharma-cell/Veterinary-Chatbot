@@ -107,6 +107,14 @@ If user asks about their appointments:
 - "What appointments have I booked?" → List from context.appointments.recent
 - "Tell me about my pet's history" → Reference past appointments and reasons
 
+PROFILE UPDATES:
+If user wants to update their information:
+- "Change my pet's name to [name]" → Respond with: "I'll update your pet's name to [name]. Please use the command: UPDATE_PET_NAME:[name]"
+- "My new email is [email]" → Respond with: "I'll update your email to [email]. Please use the command: UPDATE_EMAIL:[email]"
+- "Update my phone to [number]" → Respond with: "I'll update your phone to [number]. Please use the command: UPDATE_PHONE:[number]"
+- "My pet is a [type]" → Respond with: "I'll update your pet type to [type]. Please use the command: UPDATE_PET_TYPE:[type]"
+- Always acknowledge updates and confirm the changes
+
 ${contextPrompt}`;
 
       // Build the conversation context

@@ -68,8 +68,15 @@ class AppointmentController {
     try {
       const { sessionId } = req.query;
 
-      const query = sessionId ? { sessionId } : {};
-      const appointments = await Appointment.find(query).sort({ createdAt: -1 });
+      // SECURITY FIX: Require sessionId - never return ALL appointments
+      if (!sessionId) {
+        return res.status(403).json({
+          error: 'SessionId required for privacy. Cannot access appointments without proper session.'
+        });
+      }
+
+      // Only return appointments for THIS specific session
+      const appointments = await Appointment.find({ sessionId }).sort({ createdAt: -1 });
 
       res.json({
         appointments

@@ -95,6 +95,50 @@ const ChatWidget = ({ config }) => {
 
     const lowerMessage = message.toLowerCase();
 
+    // Check for profile update commands
+    if (message.includes('UPDATE_')) {
+      const updates = {};
+      let updateMessage = '';
+
+      if (message.includes('UPDATE_PET_NAME:')) {
+        const petName = message.split('UPDATE_PET_NAME:')[1].trim();
+        updates.petName = petName;
+        updateMessage = `Pet name updated to: ${petName}`;
+      } else if (message.includes('UPDATE_EMAIL:')) {
+        const email = message.split('UPDATE_EMAIL:')[1].trim();
+        updates.email = email;
+        updateMessage = `Email updated to: ${email}`;
+      } else if (message.includes('UPDATE_PHONE:')) {
+        const phone = message.split('UPDATE_PHONE:')[1].trim();
+        updates.phone = phone;
+        updateMessage = `Phone updated to: ${phone}`;
+      } else if (message.includes('UPDATE_PET_TYPE:')) {
+        const petType = message.split('UPDATE_PET_TYPE:')[1].trim();
+        updates.petType = petType;
+        updateMessage = `Pet type updated to: ${petType}`;
+      } else if (message.includes('UPDATE_OWNER_NAME:')) {
+        const ownerName = message.split('UPDATE_OWNER_NAME:')[1].trim();
+        updates.ownerName = ownerName;
+        updateMessage = `Owner name updated to: ${ownerName}`;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        // Save updates to localStorage
+        StorageService.saveUserProfile(updates);
+
+        // Add confirmation message
+        const confirmMessage = {
+          id: `msg-${Date.now()}-update`,
+          role: 'bot',
+          content: `✅ ${updateMessage}. Your profile has been updated successfully!`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, confirmMessage]);
+        StorageService.saveChatMessage(confirmMessage);
+        return;
+      }
+    }
+
     // Check if user is responding to appointment suggestion
     if (awaitingAppointmentConfirmation) {
       if (lowerMessage.includes('yes') || lowerMessage.includes('sure') ||
