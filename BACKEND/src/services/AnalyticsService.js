@@ -115,7 +115,7 @@ class AnalyticsService extends EventEmitter {
   trackSession(sessionId, event, data = {}) {
     switch (event) {
       case 'start':
-        this.sessionDuration.set(sessionId, {
+        this.metrics.sessionDuration.set(sessionId, {
           startTime: Date.now(),
           events: []
         });
@@ -123,7 +123,7 @@ class AnalyticsService extends EventEmitter {
         break;
 
       case 'message':
-        const session = this.sessionDuration.get(sessionId);
+        const session = this.metrics.sessionDuration.get(sessionId);
         if (session) {
           session.events.push({
             type: 'message',
@@ -174,7 +174,7 @@ class AnalyticsService extends EventEmitter {
         break;
 
       case 'end':
-        const endSession = this.sessionDuration.get(sessionId);
+        const endSession = this.metrics.sessionDuration.get(sessionId);
         if (endSession) {
           const duration = Date.now() - endSession.startTime;
           endSession.duration = duration;
