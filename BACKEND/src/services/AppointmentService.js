@@ -94,11 +94,11 @@ Is this information correct? (Type 'yes' to confirm or 'no' to start over)`;
     // Remove all non-digits
     const cleaned = phone.replace(/\D/g, '');
 
-    // Check if it's a valid length (10-15 digits)
-    if (cleaned.length < 10 || cleaned.length > 15) {
+    // Check if it's exactly 10 digits
+    if (cleaned.length !== 10) {
       return {
         valid: false,
-        message: 'Please provide a valid phone number with at least 10 digits.'
+        message: 'Please provide a valid 10-digit phone number.'
       };
     }
 
@@ -111,18 +111,98 @@ Is this information correct? (Type 'yes' to confirm or 'no' to start over)`;
   // Validate date and time
   validateDateTime(dateTimeStr) {
     try {
-      // Try to parse various date formats
-      const inputDate = new Date(dateTimeStr);
+      let inputDate;
+      const now = new Date();
+      const lowerStr = dateTimeStr.toLowerCase().trim();
 
-      // Check if date is valid
-      if (isNaN(inputDate.getTime())) {
-        return {
-          valid: false,
-          message: 'Please provide a valid date and time (e.g., "tomorrow at 2pm", "January 15 at 3:30pm", "2024-01-15 14:00").'
-        };
+      // Parse natural language dates
+      if (lowerStr.includes('tomorrow')) {
+        inputDate = new Date();
+        inputDate.setDate(inputDate.getDate() + 1);
+
+        // Extract time if provided
+        const timeMatch = lowerStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
+        if (timeMatch) {
+          let hours = parseInt(timeMatch[1]);
+          const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
+          const meridiem = timeMatch[3].toLowerCase();
+
+          if (meridiem === 'pm' && hours !== 12) hours += 12;
+          if (meridiem === 'am' && hours === 12) hours = 0;
+
+          inputDate.setHours(hours, minutes, 0, 0);
+        } else {
+          inputDate.setHours(10, 0, 0, 0); // Default to 10 AM
+        }
+      }
+      else if (lowerStr.includes('next')) {
+        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        let targetDay = -1;
+
+        // Find which day is mentioned
+        for (let i = 0; i < days.length; i++) {
+          if (lowerStr.includes(days[i])) {
+            targetDay = i;
+            break;
+          }
+        }
+
+        if (targetDay !== -1) {
+          inputDate = new Date();
+          const currentDay = inputDate.getDay();
+          let daysToAdd = targetDay - currentDay;
+          if (daysToAdd <= 0) daysToAdd += 7; // Next week
+          inputDate.setDate(inputDate.getDate() + daysToAdd);
+
+          // Extract time if provided
+          const timeMatch = lowerStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
+          if (timeMatch) {
+            let hours = parseInt(timeMatch[1]);
+            const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
+            const meridiem = timeMatch[3].toLowerCase();
+
+            if (meridiem === 'pm' && hours !== 12) hours += 12;
+            if (meridiem === 'am' && hours === 12) hours = 0;
+
+            inputDate.setHours(hours, minutes, 0, 0);
+          } else {
+            inputDate.setHours(10, 0, 0, 0); // Default to 10 AM
+          }
+        } else {
+          // Try parsing as regular date
+          inputDate = new Date(dateTimeStr);
+        }
+      }
+      else if (lowerStr.includes('today')) {
+        inputDate = new Date();
+
+        // Extract time if provided
+        const timeMatch = lowerStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
+        if (timeMatch) {
+          let hours = parseInt(timeMatch[1]);
+          const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
+          const meridiem = timeMatch[3].toLowerCase();
+
+          if (meridiem === 'pm' && hours !== 12) hours += 12;
+          if (meridiem === 'am' && hours === 12) hours = 0;
+
+          inputDate.setHours(hours, minutes, 0, 0);
+        } else {
+          inputDate.setHours(inputDate.getHours() + 2, 0, 0, 0); // 2 hours from now
+        }
+      }
+      else {
+        // Try to parse various date formats
+        inputDate = new Date(dateTimeStr);
       }
 
-      const now = new Date();
+      // Check if date is valid
+      if (!inputDate || isNaN(inputDate.getTime())) {
+        return {
+          valid: false,
+          message: 'Please provide a valid date and time (e.g., "tomorrow at 2pm", "next Monday at 10:30am", "January 20 at 3pm").'
+        };
+      }
 
       // Check if date is in the past
       if (inputDate <= now) {
