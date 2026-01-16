@@ -81,7 +81,20 @@ const ChatWidget = ({ config }) => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/chat`, {
+      // First, wake up the server if it's sleeping (Render free tier)
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
+      // Try to wake up the server with a health check first
+      try {
+        await fetch(`${apiUrl}/health`, {
+          method: 'GET',
+          signal: AbortSignal.timeout(5000) // 5 second timeout for health check
+        });
+      } catch (healthError) {
+        console.log('Server might be waking up...');
+      }
+
+      const response = await fetch(`${apiUrl}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -110,10 +123,16 @@ const ChatWidget = ({ config }) => {
       }
     } catch (error) {
       console.error('Chat error:', error);
+
+      // Check if it's a network/connection error
+      const isNetworkError = error.message?.includes('Failed to fetch') || error.message?.includes('Network');
+
       const errorMessage = {
         id: `msg-${Date.now()}-error`,
         role: 'bot',
-        content: 'I apologize, but I\'m having trouble connecting right now. Please try again later.',
+        content: isNetworkError
+          ? 'The server is waking up (this may take a few seconds on first use). Please try your message again in a moment.'
+          : 'I apologize, but I\'m having trouble processing your request. Please try again.',
         timestamp: new Date(),
         isError: true
       };
