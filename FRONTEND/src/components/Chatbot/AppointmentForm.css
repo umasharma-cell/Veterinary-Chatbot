@@ -165,28 +165,68 @@
   grid-column: 1 / -1;
 }
 
-.phone-input {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 12px;
+/* React Phone Input Styles */
+.PhoneInput {
+  display: flex;
+  align-items: center;
+  position: relative;
 }
 
-.country-select {
+.phone-input-field .PhoneInputInput,
+.phone-input-error .PhoneInputInput {
+  width: 100%;
   padding: 12px 16px;
   border: 2px solid #e0e0e0;
   border-radius: 10px;
   font-size: 15px;
-  font-weight: 500;
+  font-family: inherit;
+  background: #fafafa;
+  transition: all 0.2s ease;
+}
+
+.phone-input-field .PhoneInputInput:focus {
+  outline: none;
+  border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.phone-input-error .PhoneInputInput {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.phone-input-error .PhoneInputInput:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.PhoneInputCountry {
+  margin-right: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.PhoneInputCountrySelect {
+  padding: 8px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 15px;
   background: #fafafa;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.country-select:focus {
+.PhoneInputCountrySelect:focus {
   outline: none;
   border-color: #667eea;
   background: white;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.PhoneInputCountryIcon {
+  width: 20px;
+  height: 15px;
+  margin-right: 8px;
 }
 
 /* Error Messages */

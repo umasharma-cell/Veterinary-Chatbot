@@ -1,22 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import PhoneInput, { isValidPhoneNumber, parsePhoneNumber } from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 import StorageService from '../../services/StorageService';
 import './AppointmentForm.css';
-
-// Country codes with phone validation rules
-const countryCodes = [
-  { code: '+1', country: 'USA', flag: '🇺🇸', length: 10, pattern: /^\d{10}$/ },
-  { code: '+91', country: 'India', flag: '🇮🇳', length: 10, pattern: /^[6-9]\d{9}$/ },
-  { code: '+44', country: 'UK', flag: '🇬🇧', length: 10, pattern: /^[7]\d{9}$/ },
-  { code: '+61', country: 'Australia', flag: '🇦🇺', length: 9, pattern: /^[4-5]\d{8}$/ },
-  { code: '+92', country: 'Pakistan', flag: '🇵🇰', length: 10, pattern: /^[3]\d{9}$/ },
-  { code: '+86', country: 'China', flag: '🇨🇳', length: 11, pattern: /^1\d{10}$/ },
-  { code: '+81', country: 'Japan', flag: '🇯🇵', length: 10, pattern: /^[7-9]0\d{8}$/ },
-  { code: '+49', country: 'Germany', flag: '🇩🇪', length: 11, pattern: /^1[5-7]\d{8,9}$/ },
-  { code: '+33', country: 'France', flag: '🇫🇷', length: 9, pattern: /^[6-7]\d{8}$/ },
-  { code: '+971', country: 'UAE', flag: '🇦🇪', length: 9, pattern: /^5\d{8}$/ },
-  { code: '+65', country: 'Singapore', flag: '🇸🇬', length: 8, pattern: /^[8-9]\d{7}$/ },
-  { code: '+27', country: 'South Africa', flag: '🇿🇦', length: 9, pattern: /^[6-8]\d{8}$/ },
-];
 
 const AppointmentForm = ({ isOpen, onClose, onSubmit, triggerReason }) => {
   const [formData, setFormData] = useState({
@@ -24,7 +10,6 @@ const AppointmentForm = ({ isOpen, onClose, onSubmit, triggerReason }) => {
     email: '',
     petName: '',
     petType: 'dog',
-    countryCode: '+1',
     phoneNumber: '',
     appointmentDate: '',
     appointmentTime: '',
@@ -34,7 +19,6 @@ const AppointmentForm = ({ isOpen, onClose, onSubmit, triggerReason }) => {
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]);
 
   useEffect(() => {
     // Load user profile from localStorage for returning users
@@ -48,27 +32,9 @@ const AppointmentForm = ({ isOpen, onClose, onSubmit, triggerReason }) => {
       if (userProfile.petName) updates.petName = userProfile.petName;
       if (userProfile.petType) updates.petType = userProfile.petType;
 
-      // Handle phone number
+      // Handle phone number (now stored as full international format)
       if (userProfile.phone) {
-        // Extract country code and phone number
-        let phoneStr = userProfile.phone;
-        let foundCountry = null;
-
-        // Try to match country code
-        for (const country of countryCodes) {
-          if (phoneStr.startsWith(country.code)) {
-            foundCountry = country;
-            updates.countryCode = country.code;
-            updates.phoneNumber = phoneStr.substring(country.code.length);
-            setSelectedCountry(country);
-            break;
-          }
-        }
-
-        // If no country code matched, assume it's just the number
-        if (!foundCountry && phoneStr.length <= 10) {
-          updates.phoneNumber = phoneStr;
-        }
+        updates.phoneNumber = userProfile.phone;
       }
 
       setFormData(prev => ({ ...prev, ...updates }));
@@ -100,9 +66,9 @@ const AppointmentForm = ({ isOpen, onClose, onSubmit, triggerReason }) => {
         break;
 
       case 'phoneNumber':
-        if (!value.trim()) error = 'Phone number is required';
-        else if (!selectedCountry.pattern.test(value)) {
-          error = `Please enter a valid ${selectedCountry.country} phone number`;
+        if (!value || !value.trim()) error = 'Phone number is required';
+        else if (!isValidPhoneNumber(value)) {
+          error = 'Please enter a valid phone number';
         }
         break;
 
@@ -139,12 +105,13 @@ const AppointmentForm = ({ isOpen, onClose, onSubmit, triggerReason }) => {
     }
   };
 
-  const handleCountryChange = (e) => {
-    const code = e.target.value;
-    const country = countryCodes.find(c => c.code === code);
-    setSelectedCountry(country);
-    setFormData(prev => ({ ...prev, countryCode: code, phoneNumber: '' }));
-    setErrors(prev => ({ ...prev, phoneNumber: '' }));
+  const handlePhoneChange = (value) => {
+    setFormData(prev => ({ ...prev, phoneNumber: value || '' }));
+
+    // Clear error when user starts typing
+    if (errors.phoneNumber) {
+      setErrors(prev => ({ ...prev, phoneNumber: '' }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -153,7 +120,7 @@ const AppointmentForm = ({ isOpen, onClose, onSubmit, triggerReason }) => {
     // Validate all fields
     const newErrors = {};
     Object.keys(formData).forEach(key => {
-      if (key !== 'countryCode' && key !== 'petType' && key !== 'urgency') {
+      if (key !== 'petType' && key !== 'urgency') {
         const error = validateField(key, formData[key]);
         if (error) newErrors[key] = error;
       }
@@ -169,7 +136,7 @@ const AppointmentForm = ({ isOpen, onClose, onSubmit, triggerReason }) => {
     try {
       await onSubmit({
         ...formData,
-        fullPhoneNumber: `${formData.countryCode}${formData.phoneNumber}`,
+        fullPhoneNumber: formData.phoneNumber, // Already in international format
         appointmentDateTime: `${formData.appointmentDate} ${formData.appointmentTime}`
       });
 
@@ -179,7 +146,6 @@ const AppointmentForm = ({ isOpen, onClose, onSubmit, triggerReason }) => {
         email: '',
         petName: '',
         petType: 'dog',
-        countryCode: '+1',
         phoneNumber: '',
         appointmentDate: '',
         appointmentTime: '',
@@ -248,28 +214,15 @@ const AppointmentForm = ({ isOpen, onClose, onSubmit, triggerReason }) => {
             <div className="form-row">
               <div className="form-group phone-group">
                 <label>Phone Number *</label>
-                <div className="phone-input">
-                  <select
-                    value={formData.countryCode}
-                    onChange={handleCountryChange}
-                    className="country-select"
-                  >
-                    {countryCodes.map(country => (
-                      <option key={country.code} value={country.code}>
-                        {country.flag} {country.code} ({country.country})
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="tel"
-                    name="phoneNumber"
-                    value={formData.phoneNumber}
-                    onChange={handleChange}
-                    className={errors.phoneNumber ? 'error' : ''}
-                    placeholder={`Enter ${selectedCountry.length} digits`}
-                    maxLength={selectedCountry.length}
-                  />
-                </div>
+                <PhoneInput
+                  placeholder="Enter phone number"
+                  value={formData.phoneNumber}
+                  onChange={handlePhoneChange}
+                  defaultCountry="US"
+                  international
+                  countryCallingCodeEditable={false}
+                  className={errors.phoneNumber ? 'phone-input-error' : 'phone-input-field'}
+                />
                 {errors.phoneNumber && <span className="error-message">{errors.phoneNumber}</span>}
               </div>
             </div>
