@@ -5,7 +5,6 @@ import AppointmentService from '../services/AppointmentService.js';
 import AppointmentSlotManager from '../services/AppointmentSlotManager.js';
 import CacheService from '../services/CacheService.js';
 import AnalyticsService from '../services/AnalyticsService.js';
-import ConversationRecovery from '../services/ConversationRecovery.js';
 import { v4 as uuidv4 } from 'uuid';
 
 class ChatController {
