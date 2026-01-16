@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import StorageService from '../../services/StorageService';
 import './AppointmentForm.css';
 
 // Country codes with phone validation rules
@@ -36,6 +37,43 @@ const AppointmentForm = ({ isOpen, onClose, onSubmit, triggerReason }) => {
   const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]);
 
   useEffect(() => {
+    // Load user profile from localStorage for returning users
+    const userProfile = StorageService.getUserProfile();
+    if (userProfile) {
+      const updates = {};
+
+      // Pre-fill basic information
+      if (userProfile.ownerName) updates.ownerName = userProfile.ownerName;
+      if (userProfile.email) updates.email = userProfile.email;
+      if (userProfile.petName) updates.petName = userProfile.petName;
+      if (userProfile.petType) updates.petType = userProfile.petType;
+
+      // Handle phone number
+      if (userProfile.phone) {
+        // Extract country code and phone number
+        let phoneStr = userProfile.phone;
+        let foundCountry = null;
+
+        // Try to match country code
+        for (const country of countryCodes) {
+          if (phoneStr.startsWith(country.code)) {
+            foundCountry = country;
+            updates.countryCode = country.code;
+            updates.phoneNumber = phoneStr.substring(country.code.length);
+            setSelectedCountry(country);
+            break;
+          }
+        }
+
+        // If no country code matched, assume it's just the number
+        if (!foundCountry && phoneStr.length <= 10) {
+          updates.phoneNumber = phoneStr;
+        }
+      }
+
+      setFormData(prev => ({ ...prev, ...updates }));
+    }
+
     // Pre-fill reason if triggered by health issue
     if (triggerReason) {
       setFormData(prev => ({ ...prev, reason: triggerReason }));

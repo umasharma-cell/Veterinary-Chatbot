@@ -191,9 +191,9 @@ class ChatController {
 
           // Generate AI response with caching
           const aiResponse = await CacheService.get(
-            { message, history },
+            { message, history, context },
             async () => {
-              const response = await GeminiService.generateResponse(message, history);
+              const response = await GeminiService.generateResponse(message, history, context);
               // Track API call for analytics
               AnalyticsService.trackGeminiCall(
                 message.length,

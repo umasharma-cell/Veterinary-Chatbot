@@ -48,11 +48,70 @@ IMPORTANT RESPONSE RULES:
 Remember: Keep it SIMPLE and SHORT. Talk like you're chatting with a friend about their pet.`;
   }
 
-  async generateResponse(userMessage, conversationHistory = []) {
+  async generateResponse(userMessage, conversationHistory = [], context = {}) {
     try {
+      // Build context information
+      let contextPrompt = '';
+
+      if (context) {
+        // Add user profile context
+        if (context.userProfile) {
+          contextPrompt += `\nUser Profile:
+- Owner Name: ${context.userProfile.ownerName || 'Not provided'}
+- Pet Name: ${context.userProfile.petName || 'Not provided'}
+- Pet Type: ${context.userProfile.petType || 'Not provided'}
+- Email: ${context.userProfile.email || 'Not provided'}
+- Phone: ${context.userProfile.phone || 'Not provided'}\n`;
+        }
+
+        // Add appointments context
+        if (context.appointments) {
+          contextPrompt += `\nAppointment Information:
+- Total Appointments: ${context.appointments.total || 0}
+- Upcoming Appointments: ${context.appointments.upcoming || 0}`;
+
+          if (context.appointments.next) {
+            const next = context.appointments.next;
+            contextPrompt += `
+- Next Appointment: ${next.appointmentDate} at ${next.appointmentTime}
+  Reason: ${next.reason}
+  Status: ${next.status}`;
+          }
+
+          if (context.appointments.recent && context.appointments.recent.length > 0) {
+            contextPrompt += '\n- Recent Appointments:';
+            context.appointments.recent.forEach((apt, index) => {
+              contextPrompt += `
+  ${index + 1}. ${apt.appointmentDate} - ${apt.petName} - ${apt.reason} (${apt.status})`;
+            });
+          }
+          contextPrompt += '\n';
+        }
+      }
+
+      // Enhanced system prompt with context awareness
+      const enhancedSystemPrompt = this.systemPrompt + `
+
+CONTEXT AWARENESS:
+You have access to the user's profile and appointment history. Use this information to:
+1. Personalize responses with pet and owner names when appropriate
+2. Reference upcoming or past appointments when relevant
+3. Remind about scheduled appointments if discussing related health issues
+4. Suggest checking appointment details if user asks about their bookings
+5. Offer to help reschedule if user mentions conflicts with existing appointments
+
+APPOINTMENT QUERIES:
+If user asks about their appointments:
+- "Do I have any appointments?" → Check context.appointments
+- "When is my next appointment?" → Reference context.appointments.next
+- "What appointments have I booked?" → List from context.appointments.recent
+- "Tell me about my pet's history" → Reference past appointments and reasons
+
+${contextPrompt}`;
+
       // Build the conversation context
       const messages = [
-        this.systemPrompt,
+        enhancedSystemPrompt,
         ...conversationHistory.map(msg =>
           `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
         ),

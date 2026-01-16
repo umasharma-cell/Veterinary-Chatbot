@@ -3,6 +3,7 @@ import ChatHeader from './ChatHeader';
 import ChatMessages from './ChatMessages';
 import ChatInput from './ChatInput';
 import AppointmentForm from './AppointmentForm';
+import StorageService from '../../services/StorageService';
 import './ChatWidget.css';
 
 const ChatWidget = ({ config }) => {
@@ -28,12 +29,30 @@ const ChatWidget = ({ config }) => {
       localStorage.setItem('vet-chatbot-session', newSessionId);
     }
 
-    // Add welcome message
+    // Load user profile if exists
+    const userProfile = StorageService.getUserProfile();
+
+    // Add personalized welcome message
     if (messages.length === 0) {
+      let welcomeContent = 'Hello! I\'m your veterinary assistant. I can help you with pet care questions or book an appointment.';
+
+      if (userProfile && userProfile.ownerName && userProfile.petName) {
+        welcomeContent = `Welcome back, ${userProfile.ownerName}! I\'m here to help with ${userProfile.petName}'s care.`;
+
+        // Check for upcoming appointments
+        const upcomingAppointments = StorageService.getUpcomingAppointments();
+        if (upcomingAppointments.length > 0) {
+          const nextApt = upcomingAppointments[0];
+          welcomeContent += ` I see you have an appointment on ${nextApt.appointmentDate} at ${nextApt.appointmentTime}.`;
+        }
+      }
+
+      welcomeContent += ' How can I assist you today?';
+
       setMessages([{
         id: 'welcome',
         role: 'bot',
-        content: 'Hello! I\'m your veterinary assistant. I can help you with pet care questions or book an appointment. How can I assist you today?',
+        content: welcomeContent,
         timestamp: new Date()
       }]);
     }
@@ -133,6 +152,10 @@ const ChatWidget = ({ config }) => {
       timestamp: new Date()
     };
     setMessages(prev => [...prev, userMessage]);
+
+    // Save message to localStorage
+    StorageService.saveChatMessage(userMessage);
+
     setIsLoading(true);
 
     try {
@@ -149,6 +172,9 @@ const ChatWidget = ({ config }) => {
         console.log('Server might be waking up...');
       }
 
+      // Get context for AI from localStorage
+      const aiContext = StorageService.getContextForAI();
+
       const response = await fetch(`${apiUrl}/api/chat`, {
         method: 'POST',
         headers: {
@@ -157,7 +183,12 @@ const ChatWidget = ({ config }) => {
         body: JSON.stringify({
           message,
           sessionId,
-          context: config || {}
+          context: {
+            ...(config || {}),
+            userProfile: aiContext.userProfile,
+            appointments: aiContext.appointments,
+            recentConversation: aiContext.recentConversation
+          }
         })
       });
 
@@ -172,6 +203,9 @@ const ChatWidget = ({ config }) => {
           timestamp: new Date()
         };
         setMessages(prev => [...prev, botMessage]);
+
+        // Save bot response to localStorage
+        StorageService.saveChatMessage(botMessage);
 
         // Check if bot is suggesting appointment
         const botSuggestion = data.message.toLowerCase();
@@ -235,6 +269,13 @@ const ChatWidget = ({ config }) => {
       const data = await response.json();
 
       if (response.ok) {
+        // Save appointment to localStorage
+        const savedAppointment = StorageService.saveAppointment({
+          ...formData,
+          id: data.appointment?.id || `apt_${Date.now()}`,
+          status: 'pending'
+        });
+
         // Add success message to chat
         const successMessage = {
           id: `msg-${Date.now()}-success`,
@@ -243,6 +284,7 @@ const ChatWidget = ({ config }) => {
           timestamp: new Date()
         };
         setMessages(prev => [...prev, successMessage]);
+        StorageService.saveChatMessage(successMessage);
 
         // Reset appointment form state
         setShowAppointmentForm(false);
