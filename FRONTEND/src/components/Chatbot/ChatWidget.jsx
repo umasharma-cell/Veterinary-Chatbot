@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ChatHeader from './ChatHeader';
 import ChatMessages from './ChatMessages';
 import ChatInput from './ChatInput';
+import AppointmentForm from './AppointmentForm';
 import './ChatWidget.css';
 
 const ChatWidget = ({ config }) => {
@@ -9,6 +10,9 @@ const ChatWidget = ({ config }) => {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState(null);
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+  const [appointmentReason, setAppointmentReason] = useState('');
+  const [awaitingAppointmentConfirmation, setAwaitingAppointmentConfirmation] = useState(false);
   const [appointmentState, setAppointmentState] = useState('NONE');
   const messagesEndRef = useRef(null);
 
@@ -70,6 +74,57 @@ const ChatWidget = ({ config }) => {
   const handleSendMessage = async (message) => {
     if (!message.trim() || isLoading) return;
 
+    const lowerMessage = message.toLowerCase();
+
+    // Check if user is responding to appointment suggestion
+    if (awaitingAppointmentConfirmation) {
+      if (lowerMessage.includes('yes') || lowerMessage.includes('sure') ||
+          lowerMessage.includes('ok') || lowerMessage.includes('please')) {
+        setShowAppointmentForm(true);
+        setAwaitingAppointmentConfirmation(false);
+
+        // Add confirmation message
+        const confirmMessage = {
+          id: `msg-${Date.now()}-bot`,
+          role: 'bot',
+          content: 'Great! Please fill out the appointment form.',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, confirmMessage]);
+        return;
+      } else {
+        setAwaitingAppointmentConfirmation(false);
+      }
+    }
+
+    // Check for direct appointment requests
+    const appointmentKeywords = ['appointment', 'book', 'schedule', 'meet', 'visit', 'consultation'];
+    const isAppointmentRequest = appointmentKeywords.some(keyword => lowerMessage.includes(keyword));
+
+    if (isAppointmentRequest && (lowerMessage.includes('want') || lowerMessage.includes('need') ||
+        lowerMessage.includes('like') || lowerMessage.includes('book') || lowerMessage.includes('schedule'))) {
+      // Add user message first
+      const userMessage = {
+        id: `msg-${Date.now()}`,
+        role: 'user',
+        content: message,
+        timestamp: new Date()
+      };
+
+      // Add acknowledgment message
+      const ackMessage = {
+        id: `msg-${Date.now()}-bot`,
+        role: 'bot',
+        content: 'I\'ll help you book an appointment. Please fill out the form with your details.',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, userMessage, ackMessage]);
+
+      setShowAppointmentForm(true);
+      setAppointmentReason('');
+      return;
+    }
+
     // Add user message
     const userMessage = {
       id: `msg-${Date.now()}`,
@@ -117,7 +172,25 @@ const ChatWidget = ({ config }) => {
           timestamp: new Date()
         };
         setMessages(prev => [...prev, botMessage]);
-        setAppointmentState(data.appointmentState || 'NONE');
+
+        // Check if bot is suggesting appointment
+        const botSuggestion = data.message.toLowerCase();
+        const healthIssueKeywords = ['vomit', 'sick', 'fever', 'pain', 'injury', 'bleeding',
+                                     'diarrhea', 'lethargy', 'appetite', 'breathing', 'swollen'];
+        const hasHealthIssue = healthIssueKeywords.some(keyword => message.toLowerCase().includes(keyword));
+
+        if (hasHealthIssue && !awaitingAppointmentConfirmation) {
+          // Add appointment suggestion
+          const suggestionMessage = {
+            id: `msg-${Date.now()}-suggest`,
+            role: 'bot',
+            content: 'I recommend scheduling an appointment with a veterinarian for proper examination. Would you like me to help you book an appointment?',
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, suggestionMessage]);
+          setAwaitingAppointmentConfirmation(true);
+          setAppointmentReason(message);
+        }
       } else {
         throw new Error(data.error || 'Failed to get response');
       }
@@ -139,6 +212,61 @@ const ChatWidget = ({ config }) => {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAppointmentSubmit = async (formData) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
+      // Send appointment data to backend
+      const response = await fetch(`${apiUrl}/api/appointments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          sessionId,
+          createdAt: new Date()
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Add success message to chat
+        const successMessage = {
+          id: `msg-${Date.now()}-success`,
+          role: 'bot',
+          content: `Great news! Your appointment has been successfully booked for ${formData.appointmentDate} at ${formData.appointmentTime}. We'll send a confirmation to ${formData.email} and call you at ${formData.fullPhoneNumber} to confirm.`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, successMessage]);
+
+        // Reset appointment form state
+        setShowAppointmentForm(false);
+        setAppointmentReason('');
+        setAwaitingAppointmentConfirmation(false);
+        setAppointmentState('COMPLETED');
+      } else {
+        throw new Error(data.error || 'Failed to book appointment');
+      }
+    } catch (error) {
+      console.error('Appointment booking error:', error);
+
+      // Add error message to chat
+      const errorMessage = {
+        id: `msg-${Date.now()}-error`,
+        role: 'bot',
+        content: 'I apologize, but there was an error booking your appointment. Please try again or contact us directly at (555) 123-4567.',
+        timestamp: new Date(),
+        isError: true
+      };
+      setMessages(prev => [...prev, errorMessage]);
+
+      // Keep form open so user can retry
+      throw error;
     }
   };
 
@@ -207,6 +335,17 @@ const ChatWidget = ({ config }) => {
           />
         </div>
       )}
+
+      {/* Appointment Form Modal */}
+      <AppointmentForm
+        isOpen={showAppointmentForm}
+        onClose={() => {
+          setShowAppointmentForm(false);
+          setAwaitingAppointmentConfirmation(false);
+        }}
+        onSubmit={handleAppointmentSubmit}
+        triggerReason={appointmentReason}
+      />
     </>
   );
 };

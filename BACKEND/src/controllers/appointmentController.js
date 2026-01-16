@@ -3,12 +3,24 @@ import Appointment from '../models/Appointment.js';
 class AppointmentController {
   async createAppointment(req, res) {
     try {
-      const { sessionId, ownerName, petName, phone, preferredDateTime } = req.body;
+      const {
+        sessionId,
+        ownerName,
+        email,
+        petName,
+        petType,
+        fullPhoneNumber,
+        appointmentDate,
+        appointmentTime,
+        appointmentDateTime,
+        reason,
+        urgency
+      } = req.body;
 
       // Validate required fields
-      if (!ownerName || !petName || !phone || !preferredDateTime) {
+      if (!ownerName || !email || !petName || !fullPhoneNumber || !appointmentDate || !appointmentTime || !reason) {
         return res.status(400).json({
-          error: 'All fields are required: ownerName, petName, phone, preferredDateTime'
+          error: 'All fields are required'
         });
       }
 
@@ -16,9 +28,15 @@ class AppointmentController {
       const appointment = new Appointment({
         sessionId: sessionId || 'direct-booking',
         ownerName,
+        email,
         petName,
-        phone,
-        preferredDateTime,
+        petType: petType || 'dog',
+        phone: fullPhoneNumber,
+        appointmentDate,
+        appointmentTime,
+        preferredDateTime: appointmentDateTime || `${appointmentDate} at ${appointmentTime}`,
+        reason,
+        urgency: urgency || 'normal',
         status: 'pending'
       });
 
