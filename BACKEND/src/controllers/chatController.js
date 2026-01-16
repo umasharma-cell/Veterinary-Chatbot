@@ -2,6 +2,10 @@ import Conversation from '../models/Conversation.js';
 import Appointment from '../models/Appointment.js';
 import GeminiService from '../services/GeminiService.js';
 import AppointmentService from '../services/AppointmentService.js';
+import AppointmentSlotManager from '../services/AppointmentSlotManager.js';
+import CacheService from '../services/CacheService.js';
+import AnalyticsService from '../services/AnalyticsService.js';
+import ConversationRecovery from '../services/ConversationRecovery.js';
 import { v4 as uuidv4 } from 'uuid';
 
 class ChatController {
@@ -75,6 +79,14 @@ class ChatController {
         if (conversation.appointmentState === 'COMPLETED') {
           const lowerMessage = message.toLowerCase().trim();
           if (lowerMessage === 'yes' || lowerMessage === 'confirm' || lowerMessage === 'y') {
+            // Confirm the slot reservation
+            if (conversation.appointmentData.slotKey) {
+              await AppointmentSlotManager.confirmReservation(
+                conversation.appointmentData.slotKey,
+                sessionId
+              );
+            }
+
             // Save appointment to database
             console.log('Saving appointment with data:', conversation.appointmentData);
             const appointment = new Appointment({
@@ -83,6 +95,9 @@ class ChatController {
             });
             await appointment.save();
             console.log('Appointment saved successfully!');
+
+            // Track analytics
+            AnalyticsService.trackSession(sessionId, 'appointment_complete');
 
             conversation.appointmentState = 'NONE';
             botResponse = 'Your appointment has been successfully booked! We\'ll contact you shortly to confirm. Is there anything else I can help you with?';
@@ -109,12 +124,44 @@ class ChatController {
             conversation.appointmentData = bookingResponse.data;
             console.log('Appointment data after processing:', conversation.appointmentData);
 
-            // Get next question based on the current state
-            // The current state tells us what we just collected
-            const nextQuestion = AppointmentService.getNextQuestion(conversation.appointmentState, conversation.appointmentData);
-            botResponse = nextQuestion.message;
-            newAppointmentState = nextQuestion.nextState;
-            conversation.appointmentState = newAppointmentState;
+            // If we just collected the date/time, check availability
+            if (conversation.appointmentState === 'CONFIRMATION' && bookingResponse.data.appointmentDate) {
+              const availability = await AppointmentSlotManager.checkAvailability(bookingResponse.data.appointmentDate);
+
+              if (!availability.available) {
+                // Slot not available, suggest alternatives
+                let suggestionMessage = `${availability.message}`;
+                if (availability.suggestedSlots && availability.suggestedSlots.length > 0) {
+                  suggestionMessage += '\n\nAvailable times nearby:';
+                  availability.suggestedSlots.forEach(slot => {
+                    suggestionMessage += `\n- ${slot.displayTime}`;
+                  });
+                  suggestionMessage += '\n\nPlease choose one of these times or suggest another.';
+                }
+                botResponse = suggestionMessage;
+                // Stay in the same state to ask for date/time again
+                newAppointmentState = conversation.appointmentState;
+              } else {
+                // Reserve the slot temporarily
+                const slotKey = await AppointmentSlotManager.reserveSlot(
+                  bookingResponse.data.appointmentDate,
+                  sessionId
+                );
+                conversation.appointmentData.slotKey = slotKey;
+
+                // Get next question (confirmation)
+                const nextQuestion = AppointmentService.getNextQuestion(conversation.appointmentState, conversation.appointmentData);
+                botResponse = nextQuestion.message;
+                newAppointmentState = nextQuestion.nextState;
+                conversation.appointmentState = newAppointmentState;
+              }
+            } else {
+              // Get next question based on the current state
+              const nextQuestion = AppointmentService.getNextQuestion(conversation.appointmentState, conversation.appointmentData);
+              botResponse = nextQuestion.message;
+              newAppointmentState = nextQuestion.nextState;
+              conversation.appointmentState = newAppointmentState;
+            }
             console.log('Moving to new state:', newAppointmentState);
           }
         }
@@ -130,12 +177,37 @@ class ChatController {
       }
       // Regular veterinary Q&A
       else {
-        // Get conversation history for context (last 10 messages)
-        const history = conversation.messages.slice(-10);
+        // Track analytics
+        AnalyticsService.trackSession(sessionId, 'message', { message });
 
-        // Generate AI response
-        const aiResponse = await GeminiService.generateResponse(message, history);
-        botResponse = aiResponse.message;
+        // Check cache for similar questions first
+        const cachedResponse = CacheService.findSimilar(message);
+
+        if (cachedResponse) {
+          console.log('Using cached response for similar question');
+          botResponse = cachedResponse;
+        } else {
+          // Get conversation history for context (last 10 messages)
+          const history = conversation.messages.slice(-10);
+
+          // Generate AI response with caching
+          const aiResponse = await CacheService.get(
+            { message, history },
+            async () => {
+              const response = await GeminiService.generateResponse(message, history);
+              // Track API call for analytics
+              AnalyticsService.trackGeminiCall(
+                message.length,
+                response.message.length,
+                response.duration || 0
+              );
+              return response;
+            },
+            { ttl: 3600000 } // Cache for 1 hour
+          );
+
+          botResponse = aiResponse.message;
+        }
       }
 
       // Add bot response to conversation

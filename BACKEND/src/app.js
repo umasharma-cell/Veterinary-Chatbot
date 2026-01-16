@@ -9,6 +9,11 @@ dotenv.config();
 import chatRoutes from './routes/chatRoutes.js';
 import appointmentRoutes from './routes/appointmentRoutes.js';
 
+// Import production services
+import rateLimiter from './middleware/rateLimiter.js';
+import AnalyticsService from './services/AnalyticsService.js';
+import CacheService from './services/CacheService.js';
+
 // Initialize Express app
 const app = express();
 
@@ -36,15 +41,63 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with']
 };
 
-// Middleware
+// Middleware - Order matters!
+
+// 1. Apply rate limiting FIRST (before any processing)
+app.use(rateLimiter.middleware());
+
+// 2. Track analytics for ALL requests
+app.use((req, res, next) => {
+  const startTime = Date.now();
+
+  // Track session start
+  if (req.body?.sessionId) {
+    AnalyticsService.trackSession(req.body.sessionId, 'start');
+  }
+
+  // Track response time when request finishes
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    AnalyticsService.trackResponseTime(req.path, duration, {
+      method: req.method,
+      statusCode: res.statusCode
+    });
+  });
+
+  next();
+});
+
+// 3. CORS configuration
 app.use(cors(corsOptions));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// 4. Body parsing
+app.use(express.json({ limit: '1mb' })); // Limit payload size
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// Health check endpoint
+// Health check endpoint with detailed stats
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Veterinary Chatbot API is running' });
+  const health = {
+    status: 'OK',
+    message: 'Veterinary Chatbot API is running',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    analytics: AnalyticsService.getStatistics(),
+    cache: CacheService.getStatistics()
+  };
+  res.json(health);
+});
+
+// Analytics endpoint for monitoring
+app.get('/api/analytics', (req, res) => {
+  const report = AnalyticsService.generateReport();
+  res.json(report);
+});
+
+// Metrics endpoint for Prometheus/Grafana
+app.get('/metrics', (req, res) => {
+  res.set('Content-Type', 'text/plain');
+  res.send(AnalyticsService.exportMetrics('prometheus'));
 });
 
 // Routes
