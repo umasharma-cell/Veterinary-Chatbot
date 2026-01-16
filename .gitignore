@@ -18,6 +18,16 @@ build/
 .DS_Store
 Thumbs.db
 
+# Windows special files (prevent git errors)
+nul
+NUL
+aux
+AUX
+con
+CON
+prn
+PRN
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
