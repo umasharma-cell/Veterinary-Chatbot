@@ -147,50 +147,18 @@ const ChatWidget = ({ config }) => {
           onClick={() => setIsOpen(true)}
           aria-label="Open chat"
         >
-          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            {/* Robot Head */}
-            <circle cx="16" cy="14" r="10" fill="url(#gradient1)" stroke="white" strokeWidth="2"/>
-            {/* Robot Eyes */}
-            <circle cx="12" cy="12" r="2.5" fill="white">
-              <animate attributeName="r" values="2.5;3;2.5" dur="2s" repeatCount="indefinite"/>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C13.19 22 14.34 21.78 15.41 21.38L19.44 22.38C19.78 22.46 20.13 22.31 20.31 22.01C20.49 21.71 20.47 21.33 20.26 21.05L18.52 18.48C20.04 16.82 21 14.54 21 12C21 6.48 16.52 2 12 2Z"
+                  fill="rgba(255, 255, 255, 0.9)"/>
+            <circle cx="8" cy="12" r="1.5" fill="rgba(0, 0, 0, 0.8)">
+              <animate attributeName="r" values="1.5;2;1.5" dur="3s" repeatCount="indefinite"/>
             </circle>
-            <circle cx="20" cy="12" r="2.5" fill="white">
-              <animate attributeName="r" values="2.5;3;2.5" dur="2s" repeatCount="indefinite" begin="0.2s"/>
+            <circle cx="12" cy="12" r="1.5" fill="rgba(0, 0, 0, 0.8)">
+              <animate attributeName="r" values="1.5;2;1.5" dur="3s" repeatCount="indefinite" begin="0.5s"/>
             </circle>
-            {/* Robot Pupils */}
-            <circle cx="12" cy="12" r="1" fill="#1a237e"/>
-            <circle cx="20" cy="12" r="1" fill="#1a237e"/>
-            {/* Robot Mouth */}
-            <rect x="12" y="17" width="8" height="2" rx="1" fill="white"/>
-            {/* Robot Antenna */}
-            <rect x="15" y="2" width="2" height="4" fill="url(#gradient2)"/>
-            <circle cx="16" cy="2" r="1.5" fill="#ffd700">
-              <animate attributeName="opacity" values="0.5;1;0.5" dur="1s" repeatCount="indefinite"/>
+            <circle cx="16" cy="12" r="1.5" fill="rgba(0, 0, 0, 0.8)">
+              <animate attributeName="r" values="1.5;2;1.5" dur="3s" repeatCount="indefinite" begin="1s"/>
             </circle>
-            {/* Chat Bubble */}
-            <path d="M24 18C24 17.4477 24.4477 17 25 17H29C29.5523 17 30 17.4477 30 18V24C30 24.5523 29.5523 25 29 25H27L25 27V25H25C24.4477 25 24 24.5523 24 24V18Z"
-                  fill="url(#gradient3)"
-                  fillOpacity="0.9">
-              <animate attributeName="fill-opacity" values="0.6;0.9;0.6" dur="2s" repeatCount="indefinite"/>
-            </path>
-            {/* Chat Dots */}
-            <circle cx="26" cy="21" r="0.5" fill="white"/>
-            <circle cx="27.5" cy="21" r="0.5" fill="white"/>
-            <circle cx="29" cy="21" r="0.5" fill="white"/>
-            <defs>
-              <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#667eea"/>
-                <stop offset="100%" stopColor="#764ba2"/>
-              </linearGradient>
-              <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#f093fb"/>
-                <stop offset="100%" stopColor="#f5576c"/>
-              </linearGradient>
-              <linearGradient id="gradient3" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#13B955"/>
-                <stop offset="100%" stopColor="#06D6A0"/>
-              </linearGradient>
-            </defs>
           </svg>
         </button>
       )}
