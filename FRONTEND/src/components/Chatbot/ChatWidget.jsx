@@ -15,6 +15,9 @@ const ChatWidget = ({ config }) => {
   const [appointmentReason, setAppointmentReason] = useState('');
   const [awaitingAppointmentConfirmation, setAwaitingAppointmentConfirmation] = useState(false);
   const [appointmentState, setAppointmentState] = useState('NONE');
+  const [appointmentCollectionMode, setAppointmentCollectionMode] = useState('NONE'); // 'FORM', 'CHAT', 'NONE'
+  const [chatAppointmentData, setChatAppointmentData] = useState({});
+  const [currentAppointmentField, setCurrentAppointmentField] = useState(null);
   const messagesEndRef = useRef(null);
 
   // Generate or retrieve session ID
@@ -139,21 +142,47 @@ const ChatWidget = ({ config }) => {
       }
     }
 
+    // Check if user is collecting appointment data via chat
+    if (appointmentCollectionMode === 'CHAT' && currentAppointmentField) {
+      handleChatAppointmentInput(message);
+      return;
+    }
+
     // Check if user is responding to appointment suggestion
     if (awaitingAppointmentConfirmation) {
       if (lowerMessage.includes('yes') || lowerMessage.includes('sure') ||
           lowerMessage.includes('ok') || lowerMessage.includes('please')) {
-        setShowAppointmentForm(true);
         setAwaitingAppointmentConfirmation(false);
 
-        // Add confirmation message
-        const confirmMessage = {
-          id: `msg-${Date.now()}-bot`,
-          role: 'bot',
-          content: 'Great! Please fill out the appointment form.',
+        // Show options for form or chat
+        const userMsg = {
+          id: `msg-${Date.now()}`,
+          role: 'user',
+          content: message,
           timestamp: new Date()
         };
-        setMessages(prev => [...prev, confirmMessage]);
+
+        const optionsMessage = {
+          id: `msg-${Date.now()}-options`,
+          role: 'bot',
+          content: 'Great! How would you like to provide your appointment details?',
+          timestamp: new Date(),
+          buttons: [
+            {
+              text: '📝 Fill Form',
+              action: 'OPEN_FORM',
+              style: 'primary'
+            },
+            {
+              text: '💬 Type in Chat',
+              action: 'CHAT_BOOKING',
+              style: 'secondary'
+            }
+          ]
+        };
+        setMessages(prev => [...prev, userMsg, optionsMessage]);
+        StorageService.saveChatMessage(userMsg);
+        StorageService.saveChatMessage(optionsMessage);
         return;
       } else {
         setAwaitingAppointmentConfirmation(false);
@@ -174,16 +203,29 @@ const ChatWidget = ({ config }) => {
         timestamp: new Date()
       };
 
-      // Add acknowledgment message
-      const ackMessage = {
-        id: `msg-${Date.now()}-bot`,
+      // Add options message with buttons
+      const optionsMessage = {
+        id: `msg-${Date.now()}-options`,
         role: 'bot',
-        content: 'I\'ll help you book an appointment. Please fill out the form with your details.',
-        timestamp: new Date()
+        content: 'I\'ll help you book an appointment. How would you like to provide your details?',
+        timestamp: new Date(),
+        buttons: [
+          {
+            text: '📝 Fill Form',
+            action: 'OPEN_FORM',
+            style: 'primary'
+          },
+          {
+            text: '💬 Type in Chat',
+            action: 'CHAT_BOOKING',
+            style: 'secondary'
+          }
+        ]
       };
-      setMessages(prev => [...prev, userMessage, ackMessage]);
+      setMessages(prev => [...prev, userMessage, optionsMessage]);
+      StorageService.saveChatMessage(userMessage);
+      StorageService.saveChatMessage(optionsMessage);
 
-      setShowAppointmentForm(true);
       setAppointmentReason('');
       return;
     }
@@ -356,6 +398,181 @@ const ChatWidget = ({ config }) => {
     }
   };
 
+  const handleButtonClick = (action, data) => {
+    if (action === 'OPEN_FORM') {
+      setShowAppointmentForm(true);
+      setAppointmentCollectionMode('FORM');
+      // Add confirmation message
+      const msg = {
+        id: `msg-${Date.now()}-form`,
+        role: 'bot',
+        content: 'Opening the appointment form. Please fill in your details.',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, msg]);
+      StorageService.saveChatMessage(msg);
+    } else if (action === 'CHAT_BOOKING') {
+      setAppointmentCollectionMode('CHAT');
+      setChatAppointmentData({});
+      startChatAppointmentCollection();
+    } else if (action === 'CONFIRM_CHAT_APPOINTMENT') {
+      handleConfirmChatAppointment(data);
+    } else if (action === 'RESTART_BOOKING') {
+      // Reset and show options again
+      setChatAppointmentData({});
+      setAppointmentCollectionMode('NONE');
+      const msg = {
+        id: `msg-${Date.now()}-restart`,
+        role: 'bot',
+        content: 'No problem! How would you like to provide your appointment details?',
+        timestamp: new Date(),
+        buttons: [
+          {
+            text: '📝 Fill Form',
+            action: 'OPEN_FORM',
+            style: 'primary'
+          },
+          {
+            text: '💬 Type in Chat',
+            action: 'CHAT_BOOKING',
+            style: 'secondary'
+          }
+        ]
+      };
+      setMessages(prev => [...prev, msg]);
+      StorageService.saveChatMessage(msg);
+    }
+  };
+
+  const appointmentFields = [
+    { key: 'ownerName', label: 'your name', validation: (v) => v && v.trim().length > 0 },
+    { key: 'petName', label: 'your pet\'s name', validation: (v) => v && v.trim().length > 0 },
+    { key: 'petType', label: 'type of pet (dog, cat, bird, rabbit, hamster, other)', validation: (v) => ['dog', 'cat', 'bird', 'rabbit', 'hamster', 'other'].includes(v.toLowerCase()) },
+    { key: 'phone', label: 'your phone number', validation: (v) => v && v.trim().length >= 10 },
+    { key: 'email', label: 'your email address', validation: (v) => !v || v.includes('@') },
+    { key: 'appointmentDate', label: 'preferred date (e.g., tomorrow, next Monday, MM/DD/YYYY)', validation: (v) => v && v.trim().length > 0 },
+    { key: 'appointmentTime', label: 'preferred time (e.g., 2:00 PM, morning, afternoon)', validation: (v) => v && v.trim().length > 0 },
+    { key: 'reason', label: 'reason for the appointment', validation: (v) => v && v.trim().length > 0 }
+  ];
+
+  const startChatAppointmentCollection = () => {
+    setCurrentAppointmentField(0);
+    const firstField = appointmentFields[0];
+    const msg = {
+      id: `msg-${Date.now()}-field`,
+      role: 'bot',
+      content: `Great! Let's book your appointment. First, what is ${firstField.label}?`,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, msg]);
+    StorageService.saveChatMessage(msg);
+  };
+
+  const handleChatAppointmentInput = (input) => {
+    const fieldIndex = currentAppointmentField;
+    const field = appointmentFields[fieldIndex];
+
+    // Add user message
+    const userMsg = {
+      id: `msg-${Date.now()}`,
+      role: 'user',
+      content: input,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, userMsg]);
+    StorageService.saveChatMessage(userMsg);
+
+    // Validate input
+    let processedInput = input.trim();
+    if (field.key === 'petType') {
+      processedInput = processedInput.toLowerCase();
+    }
+
+    if (!field.validation(processedInput)) {
+      // Invalid input, ask again
+      const errorMsg = {
+        id: `msg-${Date.now()}-error`,
+        role: 'bot',
+        content: field.key === 'email' ? 'Please provide a valid email address.' :
+                 field.key === 'petType' ? 'Please specify: dog, cat, bird, rabbit, hamster, or other.' :
+                 field.key === 'phone' ? 'Please provide a valid phone number (at least 10 digits).' :
+                 `Please provide ${field.label}.`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMsg]);
+      StorageService.saveChatMessage(errorMsg);
+      return;
+    }
+
+    // Save the data
+    const updatedData = { ...chatAppointmentData, [field.key]: processedInput };
+    setChatAppointmentData(updatedData);
+
+    // Move to next field or complete
+    if (fieldIndex < appointmentFields.length - 1) {
+      // Ask for next field
+      const nextFieldIndex = fieldIndex + 1;
+      const nextField = appointmentFields[nextFieldIndex];
+      setCurrentAppointmentField(nextFieldIndex);
+
+      const nextMsg = {
+        id: `msg-${Date.now()}-next`,
+        role: 'bot',
+        content: `Thank you! Now, what is ${nextField.label}?`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, nextMsg]);
+      StorageService.saveChatMessage(nextMsg);
+    } else {
+      // All fields collected, show summary
+      setCurrentAppointmentField(null);
+      setAppointmentCollectionMode('NONE');
+      showAppointmentSummary(updatedData);
+    }
+  };
+
+  const showAppointmentSummary = (data) => {
+    const summaryMsg = {
+      id: `msg-${Date.now()}-summary`,
+      role: 'bot',
+      content: `Perfect! Here's your appointment summary:\n\n📋 **Appointment Details:**\n• Owner: ${data.ownerName}\n• Pet: ${data.petName} (${data.petType})\n• Phone: ${data.phone}\n• Email: ${data.email || 'Not provided'}\n• Date: ${data.appointmentDate}\n• Time: ${data.appointmentTime}\n• Reason: ${data.reason}\n\nIs this information correct?`,
+      timestamp: new Date(),
+      appointmentData: data,
+      buttons: [
+        {
+          text: '✅ Confirm Booking',
+          action: 'CONFIRM_CHAT_APPOINTMENT',
+          style: 'primary'
+        },
+        {
+          text: '❌ Start Over',
+          action: 'RESTART_BOOKING',
+          style: 'secondary'
+        }
+      ]
+    };
+    setMessages(prev => [...prev, summaryMsg]);
+    StorageService.saveChatMessage(summaryMsg);
+  };
+
+  const handleConfirmChatAppointment = async (appointmentData) => {
+    setIsLoading(true);
+    try {
+      // Format data for backend
+      const formattedData = {
+        ...appointmentData,
+        fullPhoneNumber: appointmentData.phone,
+        appointmentDateTime: `${appointmentData.appointmentDate} at ${appointmentData.appointmentTime}`
+      };
+
+      await handleAppointmentSubmit(formattedData);
+    } catch (error) {
+      console.error('Error confirming appointment:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleClearChat = () => {
     setMessages([{
       id: 'welcome-new',
@@ -364,6 +581,9 @@ const ChatWidget = ({ config }) => {
       timestamp: new Date()
     }]);
     setAppointmentState('NONE');
+    setAppointmentCollectionMode('NONE');
+    setChatAppointmentData({});
+    setCurrentAppointmentField(null);
 
     // Generate new session
     const newSessionId = generateSessionId();
@@ -409,6 +629,7 @@ const ChatWidget = ({ config }) => {
             messages={messages}
             isLoading={isLoading}
             messagesEndRef={messagesEndRef}
+            onButtonClick={handleButtonClick}
           />
           <ChatInput
             onSendMessage={handleSendMessage}

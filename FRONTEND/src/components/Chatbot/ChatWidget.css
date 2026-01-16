@@ -217,6 +217,53 @@
   border: 1px solid #fcc;
 }
 
+/* Message Action Buttons */
+.message-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+  padding-left: 4px;
+}
+
+.chat-action-button {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid #e0e0e0;
+  background: white;
+  color: #333;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  font-family: 'Inter', -apple-system, sans-serif;
+}
+
+.chat-action-button.primary {
+  background: #1a1a1a;
+  color: white;
+  border-color: #1a1a1a;
+}
+
+.chat-action-button.primary:hover {
+  background: #2a2a2a;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.chat-action-button.secondary {
+  background: white;
+  color: #1a1a1a;
+  border-color: #d0d0d0;
+}
+
+.chat-action-button.secondary:hover {
+  background: #f8f8f8;
+  border-color: #a0a0a0;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 .message-time {
   font-size: 11px;
   color: #999999;

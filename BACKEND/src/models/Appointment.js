@@ -12,7 +12,7 @@ const appointmentSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    required: true
+    required: false  // Not required for chat-based booking
   },
   petName: {
     type: String,
@@ -29,11 +29,11 @@ const appointmentSchema = new mongoose.Schema({
   },
   appointmentDate: {
     type: String,
-    required: true
+    required: false  // Not required for chat-based booking
   },
   appointmentTime: {
     type: String,
-    required: true
+    required: false  // Not required for chat-based booking
   },
   preferredDateTime: {
     type: String,
@@ -41,7 +41,8 @@ const appointmentSchema = new mongoose.Schema({
   },
   reason: {
     type: String,
-    required: true
+    required: false,  // Not required for chat-based booking
+    default: 'General consultation'
   },
   urgency: {
     type: String,
