@@ -3,6 +3,7 @@ import './loadEnv.js';
 
 import mongoose from 'mongoose';
 import app from './app.js';
+import selfPingService from './services/SelfPingService.js';
 
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/veterinary-chatbot';
@@ -24,4 +25,7 @@ mongoose.connect(MONGODB_URI, {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
+
+  // Start self-ping service to keep Render server awake
+  selfPingService.start();
 });

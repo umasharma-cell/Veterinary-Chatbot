@@ -13,6 +13,7 @@ import appointmentRoutes from './routes/appointmentRoutes.js';
 import rateLimiter from './middleware/rateLimiter.js';
 import AnalyticsService from './services/AnalyticsService.js';
 import CacheService from './services/CacheService.js';
+import selfPingService from './services/SelfPingService.js';
 
 // Initialize Express app
 const app = express();
@@ -83,7 +84,8 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
     memory: process.memoryUsage(),
     analytics: AnalyticsService.getStatistics(),
-    cache: CacheService.getStatistics()
+    cache: CacheService.getStatistics(),
+    selfPing: selfPingService.getStatistics()
   };
   res.json(health);
 });

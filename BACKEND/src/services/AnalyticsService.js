@@ -478,6 +478,25 @@ error_total ${this.metrics.errorRate.length}
 
     return this.generateReport();
   }
+
+  /**
+   * Get simplified statistics for health endpoint
+   */
+  getStatistics() {
+    const recentErrors = this.metrics.errorRate.filter(
+      e => e.timestamp > Date.now() - 3600000 // Last hour
+    );
+
+    return {
+      activeConnections: this.systemHealth.activeConnections,
+      totalSessions: this.metrics.sessionMetrics ? this.metrics.sessionMetrics.size : 0,
+      responseTimeCount: this.metrics.responseTime.length,
+      errorCount: recentErrors.length,
+      cacheHitRate: this.metrics.cacheHitRate || 0,
+      percentiles: this.calculatePercentiles(),
+      uptime: Date.now() - this.startTime
+    };
+  }
 }
 
 export default new AnalyticsService();
