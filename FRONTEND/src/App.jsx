@@ -8,36 +8,49 @@ function App() {
 
   return (
     <div className="App">
-      <div className="demo-page">
-        <h1>PetCare AI Assistant</h1>
-        <p>Experience next-generation veterinary support powered by advanced AI technology</p>
+      <div className="hero-section">
+        <div className="hero-content">
+          <div className="hero-badge">AI-Powered Veterinary Care</div>
+          <h1 className="hero-title">
+            Your Pet's Health,<br />
+            <span className="hero-gradient">Simplified</span>
+          </h1>
+          <p className="hero-subtitle">
+            Get instant veterinary guidance, book appointments, and receive personalized pet care advice - all powered by advanced AI technology.
+          </p>
 
-        <div className="demo-content">
-          <h2>Intelligent Veterinary Support</h2>
-          <ul>
-            <li>24/7 AI-Powered Veterinary Expertise</li>
-            <li>Instant Emergency Guidance</li>
-            <li>Smart Appointment Scheduling</li>
-            <li>Personalized Pet Care Recommendations</li>
-          </ul>
+          <div className="features-grid">
+            <div className="feature">
+              <div className="feature-icon">🏥</div>
+              <h3>24/7 Veterinary Support</h3>
+              <p>Instant answers to your pet health questions, any time of day or night</p>
+            </div>
+            <div className="feature">
+              <div className="feature-icon">📅</div>
+              <h3>Smart Scheduling</h3>
+              <p>Book appointments seamlessly through chat or our intuitive form</p>
+            </div>
+            <div className="feature">
+              <div className="feature-icon">🎯</div>
+              <h3>Personalized Care</h3>
+              <p>Tailored recommendations based on your pet's specific needs</p>
+            </div>
+            <div className="feature">
+              <div className="feature-icon">⚡</div>
+              <h3>Emergency Guidance</h3>
+              <p>Quick, reliable advice when every second counts</p>
+            </div>
+          </div>
 
-          <h2>How Can We Help?</h2>
-          <p>Our AI assistant is trained to help with:</p>
-          <ul>
-            <li>Pet Health Questions & Symptoms</li>
-            <li>Vaccination Schedules</li>
-            <li>Nutrition & Diet Guidance</li>
-            <li>Behavioral Concerns</li>
-            <li>Emergency Care Advice</li>
-            <li>Appointment Booking</li>
-          </ul>
-
-          <h2>Start a Conversation</h2>
-          <p>Click the chat button in the bottom-right corner to get started. Our AI assistant is ready to help with any pet-related questions you may have.</p>
+          <div className="cta-section">
+            <p className="cta-text">Ready to get started?</p>
+            <p className="cta-hint">Click the chat icon in the bottom-right corner</p>
+            <div className="arrow-down">↓</div>
+          </div>
         </div>
       </div>
 
-      {/* Chatbot Widget with Glassmorphic Design */}
+      {/* Chatbot Widget */}
       <ChatWidget config={config} />
     </div>
   )

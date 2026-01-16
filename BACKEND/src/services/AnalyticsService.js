@@ -123,7 +123,7 @@ class AnalyticsService extends EventEmitter {
         break;
 
       case 'message':
-        const session = this.sessionDuration.get(sessionId);
+        const session = this.metrics.sessionDuration.get(sessionId);
         if (session) {
           session.events.push({
             type: 'message',
