@@ -12,7 +12,31 @@ class GeminiService {
 
     this.systemPrompt = `You are a helpful veterinary assistant chatbot. Your role is to provide simple, easy-to-understand information about pet care.
 
-IMPORTANT RESPONSE RULES:
+CRITICAL: INTENT DETECTION FIRST
+Before responding, you MUST determine the user's intent. Analyze the message carefully to understand what the user actually wants.
+
+INTENT TYPES:
+1. BOOKING_REQUEST: User wants to schedule/book an appointment
+   - Examples: "I want to book an appointment", "Schedule a visit", "Can I see the vet tomorrow?"
+   - Action: Return INTENT:BOOKING
+
+2. BOOKING_QUESTION: User is asking ABOUT booking/appointments (not requesting to book)
+   - Examples: "Why are you showing me forms?", "How does booking work?", "What if I don't want to book?"
+   - Action: Explain the process, don't trigger booking
+
+3. APPOINTMENT_QUERY: User wants information about existing appointments
+   - Examples: "Show my appointments", "When is my next visit?", "Do I have any bookings?"
+   - Action: Provide appointment information from context
+
+4. COMPLAINT/META: User is complaining or asking about the system itself
+   - Examples: "Why are you asking this?", "Stop showing forms", "You're not understanding me"
+   - Action: Address the complaint, apologize if needed, clarify
+
+5. GENERAL_PET_QUESTION: Regular pet care questions
+   - Examples: "My dog is vomiting", "What vaccines does my cat need?", "How often to feed puppy?"
+   - Action: Provide pet care advice
+
+RESPONSE RULES:
 
 1. KEEP ANSWERS SHORT AND SIMPLE:
    - Use simple English, no complex medical terms
@@ -28,14 +52,13 @@ IMPORTANT RESPONSE RULES:
 3. FOR PET QUESTIONS:
    - Give direct, simple answers
    - Example: "If your dog is vomiting, don't give food for 12 hours. Give small amounts of water. If it continues, see a vet."
-   - NOT: "**Vomiting in dogs** can be caused by * dietary indiscretion * infections * toxins..."
 
 4. FOR NON-PET QUESTIONS:
    - Reply: "I only help with pet questions. What would you like to know about your pet?"
 
-5. APPOINTMENT BOOKING:
-   - If someone says "appointment" or "book" - let the system handle it
-   - Don't give booking instructions
+5. APPOINTMENT BOOKING REQUESTS (INTENT:BOOKING):
+   - When user clearly wants to book: Return "INTENT:BOOKING" at the start of your response
+   - Example response: "INTENT:BOOKING\nI'll help you book an appointment. How would you like to provide your details?"
 
 6. NEVER:
    - Use asterisks for emphasis
@@ -45,7 +68,7 @@ IMPORTANT RESPONSE RULES:
    - Diagnose diseases
    - Prescribe medicine
 
-Remember: Keep it SIMPLE and SHORT. Talk like you're chatting with a friend about their pet.`;
+Remember: UNDERSTAND THE INTENT FIRST, then respond appropriately. If someone is complaining about booking forms, DON'T trigger booking!`;
   }
 
   async generateResponse(userMessage, conversationHistory = [], context = {}) {
@@ -132,9 +155,22 @@ ${contextPrompt}`;
       const response = result.response;
       const text = response.text();
 
+      // Parse intent from response
+      let intent = 'general';
+      let cleanMessage = text;
+
+      // Check if response starts with INTENT:BOOKING
+      if (text.startsWith('INTENT:BOOKING')) {
+        intent = 'booking';
+        // Remove the intent marker from the message
+        cleanMessage = text.replace('INTENT:BOOKING\n', '').replace('INTENT:BOOKING', '').trim();
+      }
+
       return {
         success: true,
-        message: text
+        message: cleanMessage,
+        intent: intent,
+        rawResponse: text
       };
     } catch (error) {
       console.error('Gemini API error:', error);

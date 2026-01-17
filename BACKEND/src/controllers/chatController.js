@@ -165,47 +165,44 @@ class ChatController {
           }
         }
       }
-      // Check if user wants to book an appointment
-      else if (AppointmentService.detectBookingIntent(message)) {
-        console.log('APPOINTMENT BOOKING DETECTED for message:', message);
-        // Start appointment booking flow
-        const firstQuestion = AppointmentService.getNextQuestion('ASK_OWNER_NAME');
-        botResponse = firstQuestion.message;
-        newAppointmentState = firstQuestion.nextState;
-        conversation.appointmentState = newAppointmentState;
-      }
-      // Regular veterinary Q&A
+      // ALL OTHER MESSAGES GO THROUGH GEMINI FIRST FOR INTENT DETECTION
       else {
         // Track analytics
         AnalyticsService.trackSession(sessionId, 'message', { message });
 
-        // Check cache for similar questions first
-        const cachedResponse = CacheService.findSimilar(message);
+        // Get conversation history for context (last 10 messages)
+        const history = conversation.messages.slice(-10);
 
-        if (cachedResponse) {
-          console.log('Using cached response for similar question');
-          botResponse = cachedResponse;
+        // Generate AI response with intent detection
+        const aiResponse = await GeminiService.generateResponse(message, history, context);
+
+        // Check if Gemini detected booking intent
+        if (aiResponse.intent === 'booking') {
+          console.log('GEMINI DETECTED BOOKING INTENT for message:', message);
+
+          // Double check with fallback keyword matching (optional safety check)
+          if (AppointmentService.detectBookingIntent(message)) {
+            // Start appointment booking flow
+            const firstQuestion = AppointmentService.getNextQuestion('ASK_OWNER_NAME');
+            botResponse = firstQuestion.message;
+            newAppointmentState = firstQuestion.nextState;
+            conversation.appointmentState = newAppointmentState;
+          } else {
+            // Gemini thought it was booking but keywords disagree - use Gemini's response
+            botResponse = aiResponse.message;
+          }
         } else {
-          // Get conversation history for context (last 10 messages)
-          const history = conversation.messages.slice(-10);
-
-          // Generate AI response with caching
-          const aiResponse = await CacheService.get(
-            { message, history, context },
-            async () => {
-              const response = await GeminiService.generateResponse(message, history, context);
-              // Track API call for analytics
-              AnalyticsService.trackGeminiCall(
-                message.length,
-                response.message.length,
-                response.duration || 0
-              );
-              return response;
-            },
-            { ttl: 3600000 } // Cache for 1 hour
-          );
-
+          // Not a booking request - use Gemini's response directly
           botResponse = aiResponse.message;
+        }
+
+        // Track API call for analytics
+        if (aiResponse.success) {
+          AnalyticsService.trackGeminiCall(
+            message.length,
+            botResponse.length,
+            aiResponse.duration || 0
+          );
         }
       }
 

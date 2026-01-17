@@ -1,34 +1,52 @@
 class AppointmentService {
-  // Check if user wants to book an appointment
+  // Check if user wants to book an appointment (FALLBACK - Gemini intent is primary)
   detectBookingIntent(message) {
-    const bookingPhrases = [
-      'book an appointment',
-      'book appointment',
-      'schedule appointment',
-      'make appointment',
-      'book a visit',
-      'schedule a visit',
-      'see a vet',
-      'visit vet',
-      'need appointment',
-      'want appointment',
-      'appointment please',
-      'book consultation',
-      'schedule consultation',
-      'need to see vet',
-      'want to see vet',
-      'i want to book',
-      'i need to book',
-      'can i book',
-      'like to book',
-      'make a booking',
-      'schedule vet'
+    const lowerMessage = message.toLowerCase();
+
+    // Check for negative intent or meta-questions FIRST
+    const negativePatterns = [
+      'why',
+      'how come',
+      'what if',
+      'don\'t',
+      'not',
+      'stop',
+      'showing',
+      'asking',
+      'form',
+      'you ask',
+      'you show',
+      'when i ask',
+      'instead of'
     ];
 
-    const lowerMessage = message.toLowerCase();
+    // If message contains negative patterns or questions about the system, NOT a booking
+    const hasNegativeIntent = negativePatterns.some(pattern => lowerMessage.includes(pattern));
+    if (hasNegativeIntent) {
+      console.log('Negative/meta intent detected - NOT booking');
+      return false;
+    }
+
+    // More specific booking phrases (require more context)
+    const bookingPhrases = [
+      'i want to book',
+      'i need to book',
+      'i\'d like to book',
+      'can i book',
+      'book an appointment',
+      'schedule an appointment',
+      'make an appointment',
+      'i want an appointment',
+      'i need an appointment',
+      'book a visit',
+      'schedule a visit',
+      'need to see the vet',
+      'want to see a vet'
+    ];
+
     const isBooking = bookingPhrases.some(phrase => lowerMessage.includes(phrase));
     console.log('Checking booking intent for:', message);
-    console.log('Lowercase message:', lowerMessage);
+    console.log('Has negative intent?', hasNegativeIntent);
     console.log('Is booking intent?', isBooking);
     return isBooking;
   }
