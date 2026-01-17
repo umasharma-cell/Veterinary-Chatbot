@@ -18,6 +18,7 @@ const ChatWidget = ({ config }) => {
   const [appointmentCollectionMode, setAppointmentCollectionMode] = useState('NONE'); // 'FORM', 'CHAT', 'NONE'
   const [chatAppointmentData, setChatAppointmentData] = useState({});
   const [currentAppointmentField, setCurrentAppointmentField] = useState(null);
+  const [hasShownBookingButtons, setHasShownBookingButtons] = useState(false); // Track if we've shown booking buttons
   const messagesEndRef = useRef(null);
 
   // Generate or retrieve session ID
@@ -222,9 +223,9 @@ const ChatWidget = ({ config }) => {
         setMessages(prev => prev.filter(msg => msg.id !== typingMessage.id));
 
         // Check if backend detected booking intent
-        if (data.appointmentState === 'BOOKING_CONFIRMATION') {
+        if (data.appointmentState === 'BOOKING_CONFIRMATION' && !hasShownBookingButtons) {
           // Backend has detected booking intent through AI
-          // Show the AI's natural response with booking options
+          // Show the AI's natural response with booking options (only once)
           const botMessage = {
             id: `msg-${Date.now()}-bot`,
             role: 'bot',
@@ -246,6 +247,7 @@ const ChatWidget = ({ config }) => {
           setMessages(prev => [...prev, botMessage]);
           StorageService.saveChatMessage(botMessage);
           setAppointmentState('BOOKING_CONFIRMATION');
+          setHasShownBookingButtons(true); // Mark that we've shown the buttons
         } else {
           // Regular response (no booking intent detected)
           const botMessage = {
@@ -579,6 +581,7 @@ const ChatWidget = ({ config }) => {
     setAppointmentCollectionMode('NONE');
     setChatAppointmentData({});
     setCurrentAppointmentField(null);
+    setHasShownBookingButtons(false); // Reset for next booking
 
     // Generate new session
     const newSessionId = generateSessionId();

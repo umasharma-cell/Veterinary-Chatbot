@@ -79,6 +79,13 @@ class AppointmentService {
   // Get the next question based on current state
   getNextQuestion(state, appointmentData = {}) {
     switch (state) {
+      case 'BOOKING_CONFIRMATION':
+        // After choosing "Type in Chat" and providing name, ask for pet name
+        return {
+          message: 'Thank you! What\'s your pet\'s name?',
+          nextState: 'ASK_PHONE'
+        };
+
       case 'ASK_OWNER_NAME':
         return {
           message: 'Great! I\'ll help you book an appointment. May I have your full name, please?',
@@ -306,6 +313,17 @@ Is this information correct? (Type 'yes' to confirm or 'no' to start over)`;
     // We process based on what we're ASKING for, not what we just got
     // The state tells us what question we asked the user
     switch (state) {
+      case 'BOOKING_CONFIRMATION':
+        // User selected "Type in Chat" and is providing their name
+        // This is the first field after choosing chat mode
+        if (userMessage.trim().length < 2) {
+          response.isValid = false;
+          response.errorMessage = 'Please provide a valid name.';
+        } else {
+          response.data.ownerName = userMessage.trim();
+        }
+        break;
+
       case 'ASK_PET_NAME':
         // We asked for owner name, so this response is the owner name
         if (userMessage.trim().length < 2) {
