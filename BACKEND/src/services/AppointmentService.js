@@ -3,7 +3,31 @@ class AppointmentService {
   detectBookingIntent(message) {
     const lowerMessage = message.toLowerCase();
 
-    // Check for negative intent or meta-questions FIRST
+    // Check if user wants to VIEW bookings (NOT create new ones)
+    const viewPatterns = [
+      'what are my',
+      'what all are my',
+      'show my',
+      'show me my',
+      'list my',
+      'view my',
+      'check my',
+      'see my',
+      'my bookings',
+      'my appointments',
+      'existing booking',
+      'existing appointment',
+      'scheduled appointment',
+      'upcoming appointment'
+    ];
+
+    const isViewingBookings = viewPatterns.some(pattern => lowerMessage.includes(pattern));
+    if (isViewingBookings) {
+      console.log('User wants to VIEW bookings, not create new ones');
+      return false;
+    }
+
+    // Check for negative intent or meta-questions
     const negativePatterns = [
       'why',
       'how come',
@@ -46,6 +70,7 @@ class AppointmentService {
 
     const isBooking = bookingPhrases.some(phrase => lowerMessage.includes(phrase));
     console.log('Checking booking intent for:', message);
+    console.log('Is viewing?', isViewingBookings);
     console.log('Has negative intent?', hasNegativeIntent);
     console.log('Is booking intent?', isBooking);
     return isBooking;
