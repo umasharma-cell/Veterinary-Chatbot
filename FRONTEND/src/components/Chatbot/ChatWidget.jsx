@@ -148,87 +148,8 @@ const ChatWidget = ({ config }) => {
       return;
     }
 
-    // Check if user is responding to appointment suggestion
-    if (awaitingAppointmentConfirmation) {
-      if (lowerMessage.includes('yes') || lowerMessage.includes('sure') ||
-          lowerMessage.includes('ok') || lowerMessage.includes('please')) {
-        setAwaitingAppointmentConfirmation(false);
-
-        // Show options for form or chat
-        const userMsg = {
-          id: `msg-${Date.now()}`,
-          role: 'user',
-          content: message,
-          timestamp: new Date()
-        };
-
-        const optionsMessage = {
-          id: `msg-${Date.now()}-options`,
-          role: 'bot',
-          content: 'Great! How would you like to provide your appointment details?',
-          timestamp: new Date(),
-          buttons: [
-            {
-              text: '📝 Fill Form',
-              action: 'OPEN_FORM',
-              style: 'primary'
-            },
-            {
-              text: '💬 Type in Chat',
-              action: 'CHAT_BOOKING',
-              style: 'secondary'
-            }
-          ]
-        };
-        setMessages(prev => [...prev, userMsg, optionsMessage]);
-        StorageService.saveChatMessage(userMsg);
-        StorageService.saveChatMessage(optionsMessage);
-        return;
-      } else {
-        setAwaitingAppointmentConfirmation(false);
-      }
-    }
-
-    // Check for direct appointment requests
-    const appointmentKeywords = ['appointment', 'book', 'schedule', 'meet', 'visit', 'consultation'];
-    const isAppointmentRequest = appointmentKeywords.some(keyword => lowerMessage.includes(keyword));
-
-    if (isAppointmentRequest && (lowerMessage.includes('want') || lowerMessage.includes('need') ||
-        lowerMessage.includes('like') || lowerMessage.includes('book') || lowerMessage.includes('schedule'))) {
-      // Add user message first
-      const userMessage = {
-        id: `msg-${Date.now()}`,
-        role: 'user',
-        content: message,
-        timestamp: new Date()
-      };
-
-      // Add options message with buttons
-      const optionsMessage = {
-        id: `msg-${Date.now()}-options`,
-        role: 'bot',
-        content: 'I\'ll help you book an appointment. How would you like to provide your details?',
-        timestamp: new Date(),
-        buttons: [
-          {
-            text: '📝 Fill Form',
-            action: 'OPEN_FORM',
-            style: 'primary'
-          },
-          {
-            text: '💬 Type in Chat',
-            action: 'CHAT_BOOKING',
-            style: 'secondary'
-          }
-        ]
-      };
-      setMessages(prev => [...prev, userMessage, optionsMessage]);
-      StorageService.saveChatMessage(userMessage);
-      StorageService.saveChatMessage(optionsMessage);
-
-      setAppointmentReason('');
-      return;
-    }
+    // REMOVED: Hardcoded keyword detection for appointments
+    // Everything now goes through the AI backend for intent detection
 
     // Add user message
     const userMessage = {
@@ -281,34 +202,108 @@ const ChatWidget = ({ config }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Add bot response
-        const botMessage = {
-          id: `msg-${Date.now()}-bot`,
+        // Add typing indicator with natural delay (simulates AI thinking)
+        const typingMessage = {
+          id: `msg-${Date.now()}-typing`,
           role: 'bot',
-          content: data.message,
+          content: '',
+          isTyping: true,
           timestamp: new Date()
         };
-        setMessages(prev => [...prev, botMessage]);
+        setMessages(prev => [...prev, typingMessage]);
 
-        // Save bot response to localStorage
-        StorageService.saveChatMessage(botMessage);
+        // Natural delay based on message length (50-100ms per word, min 500ms, max 2000ms)
+        const wordCount = data.message.split(' ').length;
+        const typingDelay = Math.min(Math.max(500, wordCount * 75), 2000);
 
-        // Check if bot is suggesting appointment
-        const botSuggestion = data.message.toLowerCase();
+        await new Promise(resolve => setTimeout(resolve, typingDelay));
+
+        // Remove typing indicator and add actual response
+        setMessages(prev => prev.filter(msg => msg.id !== typingMessage.id));
+
+        // Check if backend detected booking intent
+        if (data.appointmentState === 'BOOKING_CONFIRMATION') {
+          // Backend has detected booking intent through AI
+          // Show the AI's natural response with booking options
+          const botMessage = {
+            id: `msg-${Date.now()}-bot`,
+            role: 'bot',
+            content: data.message,
+            timestamp: new Date(),
+            buttons: [
+              {
+                text: '📝 Fill Form',
+                action: 'OPEN_FORM',
+                style: 'primary'
+              },
+              {
+                text: '💬 Type in Chat',
+                action: 'CHAT_BOOKING',
+                style: 'secondary'
+              }
+            ]
+          };
+          setMessages(prev => [...prev, botMessage]);
+          StorageService.saveChatMessage(botMessage);
+          setAppointmentState('BOOKING_CONFIRMATION');
+        } else {
+          // Regular response (no booking intent detected)
+          const botMessage = {
+            id: `msg-${Date.now()}-bot`,
+            role: 'bot',
+            content: data.message,
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, botMessage]);
+          StorageService.saveChatMessage(botMessage);
+
+          // Update appointment state from backend
+          if (data.appointmentState) {
+            setAppointmentState(data.appointmentState);
+          }
+        }
+
+        // Check if bot is suggesting appointment for health issues
         const healthIssueKeywords = ['vomit', 'sick', 'fever', 'pain', 'injury', 'bleeding',
                                      'diarrhea', 'lethargy', 'appetite', 'breathing', 'swollen'];
         const hasHealthIssue = healthIssueKeywords.some(keyword => message.toLowerCase().includes(keyword));
 
-        if (hasHealthIssue && !awaitingAppointmentConfirmation) {
+        if (hasHealthIssue && !awaitingAppointmentConfirmation && data.appointmentState !== 'BOOKING_CONFIRMATION') {
+          // Add typing indicator for follow-up suggestion
+          const suggestionTyping = {
+            id: `msg-${Date.now()}-suggest-typing`,
+            role: 'bot',
+            content: '',
+            isTyping: true,
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, suggestionTyping]);
+
+          await new Promise(resolve => setTimeout(resolve, 800));
+
+          setMessages(prev => prev.filter(msg => msg.id !== suggestionTyping.id));
+
           // Add appointment suggestion
           const suggestionMessage = {
             id: `msg-${Date.now()}-suggest`,
             role: 'bot',
-            content: 'I recommend scheduling an appointment with a veterinarian for proper examination. Would you like me to help you book an appointment?',
-            timestamp: new Date()
+            content: 'Based on these symptoms, I recommend scheduling an appointment with a veterinarian for proper examination. Would you like me to help you book an appointment?',
+            timestamp: new Date(),
+            buttons: [
+              {
+                text: '📝 Fill Form',
+                action: 'OPEN_FORM',
+                style: 'primary'
+              },
+              {
+                text: '💬 Type in Chat',
+                action: 'CHAT_BOOKING',
+                style: 'secondary'
+              }
+            ]
           };
           setMessages(prev => [...prev, suggestionMessage]);
-          setAwaitingAppointmentConfirmation(true);
+          setAwaitingAppointmentConfirmation = true;
           setAppointmentReason(message);
         }
       } else {

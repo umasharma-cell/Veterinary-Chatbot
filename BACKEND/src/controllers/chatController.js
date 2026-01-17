@@ -180,17 +180,13 @@ class ChatController {
         if (aiResponse.intent === 'booking') {
           console.log('GEMINI DETECTED BOOKING INTENT for message:', message);
 
-          // Double check with fallback keyword matching (optional safety check)
-          if (AppointmentService.detectBookingIntent(message)) {
-            // Start appointment booking flow
-            const firstQuestion = AppointmentService.getNextQuestion('ASK_OWNER_NAME');
-            botResponse = firstQuestion.message;
-            newAppointmentState = firstQuestion.nextState;
-            conversation.appointmentState = newAppointmentState;
-          } else {
-            // Gemini thought it was booking but keywords disagree - use Gemini's response
-            botResponse = aiResponse.message;
-          }
+          // Instead of immediately starting the form, ask for confirmation
+          // This feels more natural and conversational
+          botResponse = aiResponse.message || "I'd be happy to help you book an appointment. How would you like to provide your details?";
+
+          // Add a flag to indicate this is a booking confirmation request
+          // The frontend will show the Fill Form / Type in Chat buttons
+          newAppointmentState = 'BOOKING_CONFIRMATION';
         } else {
           // Not a booking request - use Gemini's response directly
           botResponse = aiResponse.message;

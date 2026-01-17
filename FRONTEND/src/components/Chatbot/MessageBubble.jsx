@@ -21,9 +21,17 @@ const MessageBubble = ({ message, onButtonClick }) => {
   return (
     <div className={`message-bubble ${message.role}`}>
       <div className={`message-content ${message.isError ? 'error' : ''}`}>
-        {message.content}
+        {message.isTyping ? (
+          <div className="typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        ) : (
+          message.content
+        )}
       </div>
-      {message.buttons && message.buttons.length > 0 && (
+      {!message.isTyping && message.buttons && message.buttons.length > 0 && (
         <div className="message-buttons">
           {message.buttons.map((button, index) => (
             <button
@@ -36,9 +44,11 @@ const MessageBubble = ({ message, onButtonClick }) => {
           ))}
         </div>
       )}
-      <div className="message-time">
-        {formatTime(message.timestamp)}
-      </div>
+      {!message.isTyping && (
+        <div className="message-time">
+          {formatTime(message.timestamp)}
+        </div>
+      )}
     </div>
   );
 };
