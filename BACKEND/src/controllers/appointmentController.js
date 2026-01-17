@@ -17,10 +17,10 @@ class AppointmentController {
         urgency
       } = req.body;
 
-      // Validate required fields
-      if (!ownerName || !email || !petName || !fullPhoneNumber || !appointmentDate || !appointmentTime || !reason) {
+      // Validate required fields (email is optional)
+      if (!ownerName || !petName || !fullPhoneNumber || !appointmentDate || !appointmentTime || !reason) {
         return res.status(400).json({
-          error: 'All fields are required'
+          error: 'Required fields: ownerName, petName, fullPhoneNumber, appointmentDate, appointmentTime, reason'
         });
       }
 
@@ -28,7 +28,7 @@ class AppointmentController {
       const appointment = new Appointment({
         sessionId: sessionId || 'direct-booking',
         ownerName,
-        email,
+        email: email || '', // Email is optional
         petName,
         petType: petType || 'dog',
         phone: fullPhoneNumber,
