@@ -7,9 +7,10 @@ class GeminiService {
     console.log('Gemini API Key status:', apiKey ? `Loaded (${apiKey.substring(0, 10)}...)` : 'Missing');
 
     this.genAI = new GoogleGenerativeAI(apiKey);
-    // Use latest Gemini model with enhanced reasoning capabilities (December 2024)
-    // gemini-2.0-flash-thinking-exp-1219 provides better intent detection and reasoning
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash-thinking-exp-1219' });
+    // Use latest Gemini 3 Flash Preview model for frontier intelligence with speed and efficiency
+    // gemini-3-flash-preview offers Pro-level intelligence at Flash speed and cost
+    // Has 1M token context window and knowledge cutoff of January 2025
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
     this.systemPrompt = `You are a helpful veterinary assistant chatbot. Your role is to provide simple, easy-to-understand information about pet care.
 
